@@ -73,7 +73,7 @@ jobs:
       # content at its normal repo-relative paths.
       - name: Checkout PR merge ref (same-repo, trusted)
         if: steps.trust.outputs.same_repo == 'true'
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/pull/${{ github.event.pull_request.number }}/merge
           persist-credentials: false
@@ -95,7 +95,7 @@ jobs:
       # branch itself.
       - name: Checkout base.sha (fork, untrusted head)
         if: steps.trust.outputs.same_repo != 'true'
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
