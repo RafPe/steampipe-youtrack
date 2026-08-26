@@ -371,17 +371,18 @@ sha256sum -c checksums.txt        # or: shasum -a 256 -c checksums.txt
 
 # Build provenance attestation (gh attestation is a built-in gh CLI
 # command on a recent gh, not a separate extension to install)
-gh attestation verify steampipe-plugin-youtrack_linux_amd64.tar.gz \
+gh attestation verify steampipe-plugin-youtrack_linux_amd64.gz \
   --repo RafPe/steampipe-plugin-youtrack
 
 # SBOM inspection (SPDX JSON, one per archive)
 jq '.packages[] | {name, versionInfo}' \
-  steampipe-plugin-youtrack_linux_amd64.tar.gz.spdx.json
+  steampipe-plugin-youtrack_linux_amd64.gz.spdx.json
 ```
 
-Each archive (`steampipe-plugin-youtrack_{os}_{arch}.tar.gz`) contains
-exactly one file, `steampipe-plugin-youtrack.plugin`; a real `tar.gz`, not
-a bare gzip stream, so `tar -tzf` lists it directly.
+Each archive (`steampipe-plugin-youtrack_{os}_{arch}.gz`) is a bare gzip
+stream of the single `steampipe-plugin-youtrack.plugin` binary — not a
+tar.gz — as the Steampipe Hub's build pipeline requires; extract it with
+`gzip -dc <archive> > steampipe-plugin-youtrack.plugin`.
 
 ## Steampipe Hub onboarding handoff
 

@@ -1,0 +1,3 @@
+kind: Changed
+body: Release archives now use the bare `gz` format (`steampipe-plugin-youtrack_{os}_{arch}.gz`, a gzip stream of the plugin binary) instead of `tar.gz`, as required by the Steampipe Hub build pipeline
+time: 2026-08-26T11:41:22.830016+03:00

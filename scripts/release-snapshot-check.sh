@@ -10,7 +10,8 @@ dist_dir="$repo_root/dist"
 plugin_binary="steampipe-plugin-youtrack.plugin"
 
 # Steampipe Hub artifact contract (Task 4 depends on these exact names):
-# one gzipped tar archive per platform, containing only the plugin binary.
+# one bare-gzipped plugin binary per platform (`gz` format, not tar.gz —
+# the Hub's build pipeline requires this).
 expected_platforms="linux_amd64 linux_arm64 darwin_amd64 darwin_arm64"
 
 fail() {
@@ -18,7 +19,7 @@ fail() {
 	exit 1
 }
 
-for command_name in go tar jq; do
+for command_name in go gzip jq; do
 	command -v "$command_name" >/dev/null 2>&1 || fail "required command not found: $command_name"
 done
 if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1; then
@@ -42,30 +43,30 @@ go run "github.com/goreleaser/goreleaser/v2@${goreleaser_version}" release --sna
 
 # --- 1. Exactly the 4 expected archives, with exact names ------------------
 for platform in $expected_platforms; do
-	[ -f "$dist_dir/steampipe-plugin-youtrack_${platform}.tar.gz" ] ||
-		fail "missing expected archive: steampipe-plugin-youtrack_${platform}.tar.gz"
+	[ -f "$dist_dir/steampipe-plugin-youtrack_${platform}.gz" ] ||
+		fail "missing expected archive: steampipe-plugin-youtrack_${platform}.gz"
 done
 
-actual_archive_count="$(find "$dist_dir" -maxdepth 1 -name '*.tar.gz' | wc -l | tr -d ' ')"
+actual_archive_count="$(find "$dist_dir" -maxdepth 1 -name '*.gz' | wc -l | tr -d ' ')"
 [ "$actual_archive_count" = "4" ] || {
-	find "$dist_dir" -maxdepth 1 -name '*.tar.gz' >&2
+	find "$dist_dir" -maxdepth 1 -name '*.gz' >&2
 	fail "expected exactly 4 archives in dist/, found $actual_archive_count"
 }
 
-# --- 2. Each archive contains exactly one file: the plugin binary ----------
+# --- 2. Each archive is a bare gzip stream of the plugin binary -------------
 for platform in $expected_platforms; do
-	archive="$dist_dir/steampipe-plugin-youtrack_${platform}.tar.gz"
+	archive="$dist_dir/steampipe-plugin-youtrack_${platform}.gz"
 	extract_dir="$work_dir/extract-$platform"
 	mkdir -p "$extract_dir"
-	tar -xzf "$archive" -C "$extract_dir"
+	gzip -dc "$archive" >"$extract_dir/$plugin_binary"
 
-	entry_count="$(find "$extract_dir" -type f | wc -l | tr -d ' ')"
-	[ "$entry_count" = "1" ] || {
-		find "$extract_dir" -type f >&2
-		fail "$archive: expected exactly 1 file, found $entry_count"
-	}
-	[ -f "$extract_dir/$plugin_binary" ] ||
-		fail "$archive: sole entry is not $plugin_binary"
+	[ -s "$extract_dir/$plugin_binary" ] ||
+		fail "$archive: decompressed to an empty file"
+	# A tar payload carries "ustar" at offset 257; the payload must be the
+	# raw binary, so its presence means the archive regressed to tar.gz.
+	if dd if="$extract_dir/$plugin_binary" bs=1 skip=257 count=5 2>/dev/null | grep -q ustar; then
+		fail "$archive: payload is a tar archive, expected the bare plugin binary"
+	fi
 done
 
 # --- 3. checksums.txt covers all archives and verifies ---------------------
@@ -73,7 +74,7 @@ checksums_file="$dist_dir/checksums.txt"
 [ -f "$checksums_file" ] || fail "missing checksums.txt"
 
 for platform in $expected_platforms; do
-	archive_name="steampipe-plugin-youtrack_${platform}.tar.gz"
+	archive_name="steampipe-plugin-youtrack_${platform}.gz"
 	# Exact filename-field match: checksums.txt also lists the SBOM
 	# documents, whose names contain the archive name as a substring, so a
 	# plain grep -F would false-positive even without an archive entry.
@@ -88,7 +89,7 @@ fi
 
 # --- 4. SBOM per archive, valid SPDX JSON -----------------------------------
 for platform in $expected_platforms; do
-	archive_name="steampipe-plugin-youtrack_${platform}.tar.gz"
+	archive_name="steampipe-plugin-youtrack_${platform}.gz"
 	sbom="$dist_dir/${archive_name}.spdx.json"
 	[ -f "$sbom" ] || fail "missing SBOM: ${archive_name}.spdx.json"
 	jq -er '.spdxVersion' "$sbom" >/dev/null 2>&1 ||
