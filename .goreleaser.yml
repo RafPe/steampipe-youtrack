@@ -8,14 +8,12 @@
 # `goreleaser check` against the new version before merging a bump.
 #
 # Steampipe Hub contract (see docs/turbot reference at
-# https://github.com/turbot/steampipe-plugin-aws/blob/main/.goreleaser.yml,
-# adapted here for v2 — that file targets v1 and its `format: gz` field, its
-# bare-gzip archives, and its checksum file naming are all v1-only and not
-# copied as-is):
+# https://github.com/turbot/steampipe-plugin-aws/blob/main/.goreleaser.yml;
+# that file targets GoReleaser v1, this one is its v2 equivalent):
 #   - binary:  steampipe-plugin-youtrack.plugin
-#   - archive: steampipe-plugin-youtrack_{os}_{arch}.tar.gz, containing only
-#     the plugin binary (a real tar.gz, not a bare gzip stream, so tooling
-#     that expects to `tar -x` the download works).
+#   - archive: steampipe-plugin-youtrack_{os}_{arch}.gz, a bare gzip stream
+#     of the plugin binary — NOT a tar.gz. The Hub's build pipeline requires
+#     the `gz` format (confirmed by Turbot during onboarding review).
 version: 2
 
 project_name: steampipe-plugin-youtrack
@@ -53,13 +51,13 @@ archives:
     ids:
       - steampipe-plugin-youtrack
     formats:
-      - tar.gz
+      - gz
     # No version in the name: the Hub resolves versions via release tags,
     # not filenames, and a stable name is Task 4's download-URL contract.
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    # GoReleaser adds README/LICENSE/CHANGELOG by default; the Hub contract
-    # requires the archive to contain only the plugin binary, so point
-    # `files` at a glob that (deliberately) matches nothing extra.
+    # The `gz` format only admits a single file; GoReleaser would otherwise
+    # add README/LICENSE/CHANGELOG by default, so point `files` at a glob
+    # that (deliberately) matches nothing extra.
     files:
       - none*
 
