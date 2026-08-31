@@ -6,8 +6,8 @@ toolchain go1.26.6
 
 require (
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/turbot/steampipe-plugin-sdk/v6 v6.0.0
-	google.golang.org/protobuf v1.36.11
+	github.com/turbot/steampipe-plugin-sdk/v6 v6.1.0
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 )
 
